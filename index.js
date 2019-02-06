@@ -73,7 +73,7 @@ module.exports = function(content) {
     if(options.optipng.enabled !== false)
       plugins.push(require('imagemin-optipng')(options.optipng));
     // optional optimizers
-    if(options.webp)
+    if(options.webp && options.webp.output === undefined)
       plugins.push(require('imagemin-webp')(options.webp));
 
     imagemin
@@ -81,7 +81,20 @@ module.exports = function(content) {
         plugins
       })
       .then(data => {
-        callback(null, data);
+        if (options.webp.output !== undefined) {
+          plugins.push(require('imagemin-webp')(options.webp));
+          imagemin.buffer(data, {plugins}).then(dataWebp => {
+            var context = options.context || this.rootContext;
+            var name = loaderUtils.interpolateName(this, options.webp.output, {
+              context,
+              content
+            });
+            this.emitFile(name, dataWebp);
+            callback(null, data);
+          });
+        } else {
+          callback(null, data);
+        }
       })
       .catch(err => {
         callback(err);
